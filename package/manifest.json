@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Automatic Pinned Tabs",
+  "version": "1.2.0",
+  "description": "Open and pin a user-defined set of tabs in every new Edge window.",
+  "permissions": ["tabs", "windows", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Pinned Tabs Settings"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "128": "icon128.png"
+  }
+}
