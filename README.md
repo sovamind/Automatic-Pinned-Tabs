@@ -78,6 +78,46 @@ also install extensions directly from the **Chrome Web Store** once the listing 
 
 ---
 
+## 🚀 Automated Builds (GitHub Actions)
+
+This project includes a fully automated build pipeline that runs whenever a new version tag is pushed to the repository. The automation handles all packaging steps for Chrome, Edge, and Chromium builds.
+
+### How it works
+
+When you push a tag matching the pattern `v*` (for example: `v1.4.0`), GitHub Actions automatically:
+
+1. Checks out the repository  
+2. Runs the build script (`npm run build`)  
+3. Creates platform‑specific build directories under `build/<platform>/`  
+4. Copies all source files from `/src` into each platform directory  
+5. Copies platform‑specific icons into `build/<platform>/icons/icon-##.png`  
+6. Copies common artwork (up/down/delete icons) into each platform’s icon folder  
+7. Generates ZIP archives for each platform (e.g., `chrome.zip`, `edge.zip`, `chromium.zip`)  
+8. Uploads the ZIPs as workflow artifacts  
+9. Publishes a GitHub Release for the tag with all build ZIPs attached  
+
+### Triggering a build
+
+To create a new release build:
+
+```sh
+git tag v1.4.0
+git push origin v1.4.0
+```
+
+Within a few seconds, GitHub Actions will produce fresh extension packages for all platforms and attach them to the release page.
+
+### Build script
+
+The build process is implemented in `scripts/build.js` and is invoked via:
+
+```sh
+npm run build
+```
+
+This script performs all file copying, icon mapping, and ZIP creation required for each platform.
+
+
 ## License
 
 This project is licensed under the **MIT License**.  
