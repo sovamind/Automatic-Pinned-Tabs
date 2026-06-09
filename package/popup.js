@@ -1,82 +1,152 @@
-const listEl = document.getElementById("urlList");
-const addBtn = document.getElementById("addBtn");
-const newUrl = document.getElementById("newUrl");
+function uuid() {
+  return crypto.randomUUID();
+}
 
-let urls = [];
+async function loadAndRepairPinnedList() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(["pinnedUrls"], (data) => {
+      let list = data.pinnedUrls;
+      let status = "ok";
 
-// Load saved URLs
-chrome.storage.sync.get(["pinnedUrls"], (data) => {
-  urls = data.pinnedUrls || [];
-  render();
-});
+      if (!Array.isArray(list)) {
+        chrome.storage.sync.set({ pinnedUrls: [] });
+        return resolve({ list: [], status: "rebuilt" });
+      }
 
-function render() {
-  listEl.innerHTML = "";
+      let corrupt = false;
+      let repairable = true;
 
-  urls.forEach((url, index) => {
-    const li = document.createElement("li");
+      for (const item of list) {
+        if (typeof item === "string") continue;
+        if (item === null || item === undefined) {
+          corrupt = true;
+          repairable = false;
+          break;
+        }
+        if (typeof item === "object") {
+          if (!item.url || typeof item.url !== "string") {
+            corrupt = true;
+            repairable = false;
+            break;
+          }
+        }
+        if (typeof item === "string" && item.includes("[object Object]")) {
+          corrupt = true;
+          repairable = false;
+          break;
+        }
+      }
 
-    li.innerHTML = `
-      <input type="text" value="${url}" data-edit="${index}">
-      <button data-up="${index}" class="icon-btn"><img src="arrow-up.png"></button>
-      <button data-down="${index}" class="icon-btn"><img src="arrow-down.png"></button>
-      <button data-del="${index}" class="icon-btn"><img src="delete.png"></button>
-    `;
+      if (!corrupt && list.some((i) => typeof i === "string")) {
+        const migrated = list.map((url) => ({ url, id: uuid() }));
+        chrome.storage.sync.set({ pinnedUrls: migrated });
+        return resolve({ list: migrated, status: "migrated" });
+      }
 
-    listEl.appendChild(li);
+      if (!corrupt && list.some((i) => typeof i === "object" && !i.id)) {
+        const fixed = list.map((item) => {
+          if (!item.id) item.id = uuid();
+          return item;
+        });
+        chrome.storage.sync.set({ pinnedUrls: fixed });
+        return resolve({ list: fixed, status: "fixed" });
+      }
+
+      if (corrupt && !repairable) {
+        chrome.storage.sync.set({ pinnedUrls: [] });
+        return resolve({ list: [], status: "rebuilt" });
+      }
+
+      resolve({ list, status: "ok" });
+    });
   });
 }
 
-// Add URL
-addBtn.onclick = () => {
-  const url = newUrl.value.trim();
-  if (!url) return;
+document.addEventListener("DOMContentLoaded", async () => {
+  const listContainer = document.getElementById("list");
+  const addInput = document.getElementById("addInput");
+  const addButton = document.getElementById("addButton");
+  const message = document.getElementById("message");
 
-  urls.push(url);
-  newUrl.value = "";
-  save();
-};
+  const { list, status } = await loadAndRepairPinnedList();
 
-// Handle clicks: delete, up, down
-listEl.onclick = (e) => {
-  // delete
-  if (e.target.dataset.del !== undefined) {
-    const idx = Number(e.target.dataset.del);
-    urls.splice(idx, 1);
-    save();
-    return;
+  if (status === "migrated") {
+    message.textContent =
+      "Your pinned tab list has been migrated to a new format. Please check that all your tabs were migrated.";
   }
 
-  // move up
-  if (e.target.dataset.up !== undefined) {
-    const idx = Number(e.target.dataset.up);
-    if (idx > 0) {
-      [urls[idx - 1], urls[idx]] = [urls[idx], urls[idx - 1]];
-      save();
-    }
-    return;
+  if (status === "fixed") {
+    message.textContent =
+      "Your pinned tab list got corrupted, but we think we were able to fix it. Please check your pinned tab list.";
   }
 
-  // move down
-  if (e.target.dataset.down !== undefined) {
-    const idx = Number(e.target.dataset.down);
-    if (idx < urls.length - 1) {
-      [urls[idx + 1], urls[idx]] = [urls[idx], urls[idx + 1]];
-      save();
-    }
-    return;
+  if (status === "rebuilt") {
+    message.textContent =
+      "Your pinned tab list got corrupted, but unfortunately we couldn't save your pinned tabs. We apologize but you'll have to add your pinned tabs to the list again.";
   }
-};
 
-// Handle inline editing
-listEl.addEventListener("change", (e) => {
-  if (e.target.dataset.edit !== undefined) {
-    const idx = Number(e.target.dataset.edit);
-    urls[idx] = e.target.value.trim();
-    save();
+  renderList(list);
+
+  function renderList(list) {
+    listContainer.innerHTML = "";
+
+    list.forEach((item, index) => {
+      const row = document.createElement("div");
+      row.className = "row";
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = item.url;
+
+      input.addEventListener("change", () => {
+        item.url = input.value;
+        save(list);
+      });
+
+      const up = document.createElement("button");
+      up.textContent = "▲";
+      up.onclick = () => {
+        if (index > 0) {
+          [list[index - 1], list[index]] = [list[index], list[index - 1]];
+          save(list);
+          renderList(list);
+        }
+      };
+
+      const down = document.createElement("button");
+      down.textContent = "▼";
+      down.onclick = () => {
+        if (index < list.length - 1) {
+          [list[index + 1], list[index]] = [list[index], list[index + 1]];
+          save(list);
+          renderList(list);
+        }
+      };
+
+      const del = document.createElement("button");
+      del.textContent = "X";
+      del.onclick = () => {
+        list.splice(index, 1);
+        save(list);
+        renderList(list);
+      };
+
+      row.append(input, up, down, del);
+      listContainer.appendChild(row);
+    });
   }
+
+  function save(list) {
+    chrome.storage.sync.set({ pinnedUrls: list });
+  }
+
+  addButton.onclick = () => {
+    const url = addInput.value.trim();
+    if (!url) return;
+
+    list.push({ url, id: uuid() });
+    save(list);
+    addInput.value = "";
+    renderList(list);
+  };
 });
-
-function save() {
-  chrome.storage.sync.set({ pinnedUrls: urls }, render);
-}
