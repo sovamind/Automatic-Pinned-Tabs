@@ -1,3 +1,22 @@
+const isEdge = navigator.userAgent.includes("Edg/");
+const isChrome = navigator.userAgent.includes("Chrome") && !isEdge;
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.action.setIcon({
+    path: isEdge ? {
+      16: "icons/edge-16.png",
+      32: "icons/edge-32.png",
+      48: "icons/edge-48.png",
+      128: "icons/edge-128.png"
+    } : {
+      16: "icons/chrome-16.png",
+      32: "icons/chrome-32.png",
+      48: "icons/chrome-48.png",
+      128: "icons/chrome-128.png"
+    }
+  });
+});
+
 function uuid() {
   return crypto.randomUUID();
 }
@@ -82,6 +101,12 @@ chrome.windows.onCreated.addListener(async (window) => {
     }
 
     tabs.forEach((tab) => {
+      // Sessions API guard — prevents "getTabValue undefined" crash
+      if (!chrome.sessions || !chrome.sessions.getTabValue) {
+        if (--pending === 0) createMissing(list, existing, window.id);
+        return;
+      }
+
       chrome.sessions.getTabValue(tab.id, "apt-id", (value) => {
         if (value) existing.add(value);
         if (--pending === 0) createMissing(list, existing, window.id);
@@ -96,7 +121,11 @@ function createMissing(list, existing, windowId) {
 
     chrome.tabs.create(
       { windowId, url: item.url, pinned: true, index },
-      (tab) => chrome.sessions.setTabValue(tab.id, "apt-id", item.id)
+      (tab) => {
+        if (chrome.sessions && chrome.sessions.setTabValue) {
+          chrome.sessions.setTabValue(tab.id, "apt-id", item.id);
+        }
+      }
     );
   });
 }
