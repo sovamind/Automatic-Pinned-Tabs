@@ -24,11 +24,18 @@ jobs:
       - name: Build all platforms
         run: npm run build
 
+      - name: Zip builds
+        run: |
+          cd build
+          for browser in chromium chrome edge; do
+            zip -r "${browser}.zip" "${browser}/"
+          done
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: extension-builds
-          path: build/
+          path: build/*.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
