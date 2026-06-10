@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Automatic Pinned Tabs",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Automatically creates pinned tabs in every new window.",
-  "permissions": ["tabs", "storage", "sessions"],
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
   "background": {
     "service_worker": "background.js"
   },

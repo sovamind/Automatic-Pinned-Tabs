@@ -28,10 +28,6 @@
       margin-right: 6px;
     }
 
-    button {
-      margin-left: 4px;
-      padding: 2px 6px;
-    }
     .icon-btn {
       background: none;
       border: none;
@@ -40,9 +36,24 @@
     }
 
     .icon-btn img {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       pointer-events: none;
+    }
+
+    .delete-btn:hover {
+      background: #fdd;
+      border-radius: 4px;
+    }
+
+    #addRow {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    #newUrl {
+      flex: 1;
     }
   </style>
 </head>
@@ -52,8 +63,20 @@
 
 <ul id="urlList"></ul>
 
-<input id="newUrl" type="text" placeholder="https://code.sovamind.com" style="width: 70%;">
-<button id="addBtn">Add</button>
+<div id="addRow">
+  <input id="newUrl" type="text" placeholder="https://example.com">
+  <button id="addBtn">Add</button>
+
+  <!-- PLAY button -->
+  <button id="playBtn" class="icon-btn">
+    <img src="icons/fluent-go.png">
+  </button>
+
+  <!-- SAVE button: snapshot current pinned tabs as the list -->
+  <button id="saveBtn" class="icon-btn" title="Save current pinned tabs as app list">
+    <img src="icons/fluent-save.png">
+  </button>
+</div>
 
 <script src="popup.js"></script>
 </body>
