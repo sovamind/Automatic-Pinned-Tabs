@@ -2,5 +2,9 @@
   "name": "automatic-pinned-tabs",
   "scripts": {
     "build": "node scripts/build.js"
+  },
+  "devDependencies": {
+    "archiver": "^8.0.0",
+    "fs-extra": "^11.3.5"
   }
 }
